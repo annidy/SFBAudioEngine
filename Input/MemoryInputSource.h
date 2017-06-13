@@ -6,22 +6,21 @@
 #pragma once
 
 #include <memory>
-#include <sys/stat.h>
 
 #include "InputSource.h"
 
 namespace SFB {
 
 	// ========================================
-	// InputSource serving bytes from a memory-mapped file
+	// InputSource serving bytes from a region of memory
 	// ========================================
-	class MemoryMappedFileInputSource : public InputSource
+	class MemoryInputSource : public InputSource
 	{
 
 	public:
 
 		// Creation
-		explicit MemoryMappedFileInputSource(CFURLRef url);
+		MemoryInputSource(const void *bytes, SInt64 byteCount, bool copyBytes = true);
 
 	private:
 
@@ -31,21 +30,21 @@ namespace SFB {
 
 		// Functionality
 		virtual SInt64 _Read(void *buffer, SInt64 byteCount);
-		virtual bool _AtEOF() const								{ return ((mCurrentPosition - mMemory.get()) == mFilestats.st_size); }
+		virtual bool _AtEOF() const								{ return ((mCurrentPosition - mMemory.get()) == mByteCount); }
 
 		inline virtual SInt64 _GetOffset() const				{ return (mCurrentPosition - mMemory.get()); }
-		inline virtual SInt64 _GetLength() const				{ return mFilestats.st_size; }
+		inline virtual SInt64 _GetLength() const				{ return mByteCount; }
 
 		// Seeking support
 		inline virtual bool _SupportsSeeking() const			{ return true; }
 		virtual bool _SeekToOffset(SInt64 offset);
 
-		using unique_mappedmem_ptr = std::unique_ptr<int8_t, std::function<int(int8_t *)>>;
+		using unique_mem_ptr = std::unique_ptr<int8_t, void (*)(int8_t *)>;
 
 		// Data members
-		struct stat						mFilestats;
-		unique_mappedmem_ptr			mMemory;
-		int8_t							*mCurrentPosition;
+		SInt64							mByteCount;
+		unique_mem_ptr					mMemory;
+		const int8_t					*mCurrentPosition;
 	};
 
 }

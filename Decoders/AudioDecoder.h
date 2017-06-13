@@ -1,29 +1,6 @@
 /*
- *  Copyright (C) 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015 Stephen F. Booth <me@sbooth.org>
- *  All Rights Reserved.
- *
- *  Redistribution and use in source and binary forms, with or without
- *  modification, are permitted provided that the following conditions are
- *  met:
- *
- *  1. Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer.
- *
- *  2. Redistributions in binary form must reproduce the above copyright
- *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution.
- *
- *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- *  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- *  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- *  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- *  HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- *  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- *  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- *  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- *  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * Copyright (c) 2006 - 2017 Stephen F. Booth <me@sbooth.org>
+ * See https://github.com/sbooth/SFBAudioEngine/blob/master/LICENSE.txt for license information
  */
 
 #pragma once
@@ -57,7 +34,7 @@ namespace SFB {
 		{
 
 		public:
-			
+
 			/*! @brief The \c CFErrorRef error domain used by \c Decoder and subclasses */
 			static const CFStringRef ErrorDomain;
 
@@ -201,7 +178,7 @@ namespace SFB {
 			 * @param representedObject The represented object to be disposed
 			 */
 			using RepresentedObjectCleanupBlock = void (^)(void *representedObject);
-			
+
 			/*! @brief Get the represented object associated with this decoder */
 			inline RepresentedObjectCleanupBlock GetRepresentedObjectCleanupBlock() const { return mRepresentedObjectCleanupBlock; }
 
@@ -332,7 +309,7 @@ namespace SFB {
 			Decoder();
 
 			/*! @brief Create a new \c Decoder and initialize \c Decoder::mInputSource to \c inputSource */
-			Decoder(InputSource::unique_ptr inputSource);
+			explicit Decoder(InputSource::unique_ptr inputSource);
 
 		private:
 
@@ -358,7 +335,7 @@ namespace SFB {
 			// Data members
 			void							*mRepresentedObject;
 			RepresentedObjectCleanupBlock	mRepresentedObjectCleanupBlock;
-			
+
 			bool							mIsOpen;
 
 			// ========================================
@@ -390,9 +367,9 @@ namespace SFB {
 			 * @param priority The priority of the subclass
 			 */
 			template <typename T> static void RegisterSubclass(int priority = 0);
-			
+
 		};
-		
+
 		// ========================================
 		// Template implementation
 		template <typename T> void Decoder::RegisterSubclass(int priority)
@@ -400,22 +377,22 @@ namespace SFB {
 			SubclassInfo subclassInfo = {
 				.mCreateSupportedFileExtensions = T::CreateSupportedFileExtensions,
 				.mCreateSupportedMIMETypes = T::CreateSupportedMIMETypes,
-				
+
 				.mHandlesFilesWithExtension = T::HandlesFilesWithExtension,
 				.mHandlesMIMEType = T::HandlesMIMEType,
-				
+
 				.mCreateDecoder = T::CreateDecoder,
-				
+
 				.mPriority = priority
 			};
-			
+
 			sRegisteredSubclasses.push_back(subclassInfo);
-			
+
 			// Sort subclasses by priority
 			std::sort(sRegisteredSubclasses.begin(), sRegisteredSubclasses.end(), [](const SubclassInfo& a, const SubclassInfo& b) {
 				return a.mPriority > b.mPriority;
 			});
 		}
-		
+
 	}
 }

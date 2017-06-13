@@ -1,29 +1,6 @@
 /*
- *  Copyright (C) 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015 Stephen F. Booth <me@sbooth.org>
- *  All Rights Reserved.
- *
- *  Redistribution and use in source and binary forms, with or without
- *  modification, are permitted provided that the following conditions are
- *  met:
- *
- *  1. Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer.
- *
- *  2. Redistributions in binary form must reproduce the above copyright
- *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution.
- *
- *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- *  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- *  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- *  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- *  HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- *  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- *  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- *  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- *  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * Copyright (c) 2006 - 2017 Stephen F. Booth <me@sbooth.org>
+ * See https://github.com/sbooth/SFBAudioEngine/blob/master/LICENSE.txt for license information
  */
 
 #pragma once
@@ -45,7 +22,7 @@ namespace SFB {
 		/*! @brief Base class for all audio metadata reader/writer classes */
 		class Metadata
 		{
-			
+
 		public:
 
 			/*! @brief The \c CFErrorRef error domain used by \c Metadata and subclasses */
@@ -240,7 +217,7 @@ namespace SFB {
 			 */
 			CFDictionaryRef CreateDictionaryRepresentation() const;
 
-			/*! 
+			/*!
 			 * @brief Set the values contained in this object from a dictionary
 			 * @param dictionary A dictionary containing the desired values
 			 * @return \c true on success, \c false otherwise
@@ -628,7 +605,7 @@ namespace SFB {
 			 */
 			void CopyAttachedPictures(const Metadata& metadata);
 
-			
+
 			/*! @brief Get all attached pictures */
 			const picture_vector GetAttachedPictures() const;
 
@@ -665,7 +642,7 @@ namespace SFB {
 			Metadata();
 
 			/*! @brief Create a new \c Metadata and initialize \c Metadata::mURL to \c url */
-			Metadata(CFURLRef url);
+			explicit Metadata(CFURLRef url);
 
 
 			/*! @name Type-specific access */
@@ -716,7 +693,7 @@ namespace SFB {
 			virtual bool _WriteMetadata(CFErrorRef *error) = 0;
 
 			// ========================================
-			// 
+			//
 			void ClearAllMetadata();
 			void MergeChangedMetadataIntoMetadata();
 
@@ -727,28 +704,28 @@ namespace SFB {
 			{
 				CFArrayRef (*mCreateSupportedFileExtensions)();
 				CFArrayRef (*mCreateSupportedMIMETypes)();
-				
+
 				bool (*mHandlesFilesWithExtension)(CFStringRef);
 				bool (*mHandlesMIMEType)(CFStringRef);
-				
+
 				unique_ptr (*mCreateMetadata)(CFURLRef);
-				
+
 				int mPriority;
 			};
-			
+
 			static std::vector <SubclassInfo> sRegisteredSubclasses;
-			
+
 		public:
-			
+
 			/*!
 			 * @brief Register a \c Metadata subclass
 			 * @tparam T The subclass name
 			 * @param priority The priority of the subclass
 			 */
 			template <typename T> static void RegisterSubclass(int priority = 0);
-			
+
 		};
-		
+
 		// ========================================
 		// Template implementation
 		template <typename T> void Metadata::RegisterSubclass(int priority)
@@ -756,22 +733,22 @@ namespace SFB {
 			SubclassInfo subclassInfo = {
 				.mCreateSupportedFileExtensions = T::CreateSupportedFileExtensions,
 				.mCreateSupportedMIMETypes = T::CreateSupportedMIMETypes,
-				
+
 				.mHandlesFilesWithExtension = T::HandlesFilesWithExtension,
 				.mHandlesMIMEType = T::HandlesMIMEType,
-				
+
 				.mCreateMetadata = T::CreateMetadata,
-				
+
 				.mPriority = priority
 			};
-			
+
 			sRegisteredSubclasses.push_back(subclassInfo);
-			
+
 			// Sort subclasses by priority
 			std::sort(sRegisteredSubclasses.begin(), sRegisteredSubclasses.end(), [](const SubclassInfo& a, const SubclassInfo& b) {
 				return a.mPriority > b.mPriority;
 			});
 		}
-		
+
 	}
 }

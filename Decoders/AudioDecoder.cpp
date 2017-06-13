@@ -1,29 +1,6 @@
 /*
- *  Copyright (C) 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015 Stephen F. Booth <me@sbooth.org>
- *  All Rights Reserved.
- *
- *  Redistribution and use in source and binary forms, with or without
- *  modification, are permitted provided that the following conditions are
- *  met:
- *
- *  1. Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer.
- *
- *  2. Redistributions in binary form must reproduce the above copyright
- *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution.
- *
- *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- *  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- *  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- *  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- *  HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- *  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- *  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- *  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- *  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * Copyright (c) 2006 - 2017 Stephen F. Booth <me@sbooth.org>
+ * See https://github.com/sbooth/SFBAudioEngine/blob/master/LICENSE.txt for license information
  */
 
 #include <AudioToolbox/AudioFormat.h>
@@ -52,7 +29,7 @@ CFArrayRef SFB::Audio::Decoder::CreateSupportedFileExtensions()
 	CFMutableArrayRef supportedFileExtensions = CFArrayCreateMutable(kCFAllocatorDefault, 0, &kCFTypeArrayCallBacks);
 
 	for(auto subclassInfo : sRegisteredSubclasses) {
-		SFB::CFArray decoderFileExtensions = subclassInfo.mCreateSupportedFileExtensions();
+		SFB::CFArray decoderFileExtensions(subclassInfo.mCreateSupportedFileExtensions());
 		CFArrayAppendArray(supportedFileExtensions, decoderFileExtensions, CFRangeMake(0, CFArrayGetCount(decoderFileExtensions)));
 	}
 
@@ -64,7 +41,7 @@ CFArrayRef SFB::Audio::Decoder::CreateSupportedMIMETypes()
 	CFMutableArrayRef supportedMIMETypes = CFArrayCreateMutable(kCFAllocatorDefault, 0, &kCFTypeArrayCallBacks);
 
 	for(auto subclassInfo : sRegisteredSubclasses) {
-		SFB::CFArray decoderMIMETypes = subclassInfo.mCreateSupportedMIMETypes();
+		SFB::CFArray decoderMIMETypes(subclassInfo.mCreateSupportedMIMETypes());
 		CFArrayAppendArray(supportedMIMETypes, decoderMIMETypes, CFRangeMake(0, CFArrayGetCount(decoderMIMETypes)));
 	}
 
@@ -162,13 +139,13 @@ SFB::Audio::Decoder::unique_ptr SFB::Audio::Decoder::CreateForInputSource(InputS
 	if(!inputURL)
 		return nullptr;
 
-	SFB::CFString pathExtension = CFURLCopyPathExtension(inputURL);
+	SFB::CFString pathExtension(CFURLCopyPathExtension(inputURL));
 	if(!pathExtension) {
 		if(error) {
-			SFB::CFString description = CFCopyLocalizedString(CFSTR("The type of the file “%@” could not be determined."), "");
-			SFB::CFString failureReason = CFCopyLocalizedString(CFSTR("Unknown file type"), "");
-			SFB::CFString recoverySuggestion = CFCopyLocalizedString(CFSTR("The file's extension may be missing or may not match the file's type."), "");
-			
+			SFB::CFString description(CFCopyLocalizedString(CFSTR("The type of the file “%@” could not be determined."), ""));
+			SFB::CFString failureReason(CFCopyLocalizedString(CFSTR("Unknown file type"), ""));
+			SFB::CFString recoverySuggestion(CFCopyLocalizedString(CFSTR("The file's extension may be missing or may not match the file's type."), ""));
+
 			*error = CreateErrorForURL(InputSource::ErrorDomain, InputSource::FileNotFoundError, description, inputURL, failureReason, recoverySuggestion);
 		}
 
@@ -200,14 +177,14 @@ SFB::Audio::Decoder::unique_ptr SFB::Audio::Decoder::CreateForInputSource(InputS
 #pragma mark Creation and Destruction
 
 SFB::Audio::Decoder::Decoder()
-	: mInputSource(nullptr), mIsOpen(false), mRepresentedObject(nullptr), mRepresentedObjectCleanupBlock(nullptr)
+	: mInputSource(nullptr), mRepresentedObject(nullptr), mRepresentedObjectCleanupBlock(nullptr), mIsOpen(false)
 {
 	memset(&mFormat, 0, sizeof(mFormat));
 	memset(&mSourceFormat, 0, sizeof(mSourceFormat));
 }
 
 SFB::Audio::Decoder::Decoder(InputSource::unique_ptr inputSource)
-	: mInputSource(std::move(inputSource)), mIsOpen(false), mRepresentedObject(nullptr), mRepresentedObjectCleanupBlock(nullptr)
+	: mInputSource(std::move(inputSource)), mRepresentedObject(nullptr), mRepresentedObjectCleanupBlock(nullptr), mIsOpen(false)
 {
 	assert(nullptr != mInputSource);
 
@@ -318,10 +295,10 @@ CFStringRef SFB::Audio::Decoder::CreateChannelLayoutDescription() const
 
 	CFStringRef		channelLayoutDescription	= nullptr;
 	UInt32			specifierSize				= sizeof(channelLayoutDescription);
-	OSStatus		result						= AudioFormatGetProperty(kAudioFormatProperty_ChannelLayoutName, 
+	OSStatus		result						= AudioFormatGetProperty(kAudioFormatProperty_ChannelLayoutName,
 																		 sizeof(mChannelLayout.GetACL()),
 																		 mChannelLayout.GetACL(),
-																		 &specifierSize, 
+																		 &specifierSize,
 																		 &channelLayoutDescription);
 
 	if(noErr != result)

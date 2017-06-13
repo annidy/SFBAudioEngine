@@ -1,29 +1,6 @@
 /*
- *  Copyright (C) 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015 Stephen F. Booth <me@sbooth.org>
- *  All Rights Reserved.
- *
- *  Redistribution and use in source and binary forms, with or without
- *  modification, are permitted provided that the following conditions are
- *  met:
- *
- *  1. Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer.
- *
- *  2. Redistributions in binary form must reproduce the above copyright
- *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution.
- *
- *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- *  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- *  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- *  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- *  HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- *  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- *  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- *  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- *  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * Copyright (c) 2006 - 2017 Stephen F. Booth <me@sbooth.org>
+ * See https://github.com/sbooth/SFBAudioEngine/blob/master/LICENSE.txt for license information
  */
 
 #include <pthread.h>
@@ -89,7 +66,7 @@ namespace {
 		eAudioPlayerFlagStopDecoding			= 1u << 10,
 		eAudioPlayerFlagStopCollecting			= 1u << 11
 	};
-	
+
 }
 
 
@@ -101,7 +78,7 @@ class SFB::Audio::Player::DecoderStateData
 
 public:
 
-	DecoderStateData(std::unique_ptr<Decoder> decoder)
+	explicit DecoderStateData(std::unique_ptr<Decoder> decoder)
 		: DecoderStateData()
 	{
 		assert(nullptr != decoder);
@@ -144,7 +121,7 @@ public:
 private:
 
 	DecoderStateData()
-		: mDecoder(nullptr), mTimeStamp(0), mTotalFrames(0), mFramesRendered(ATOMIC_VAR_INIT(0)), mFrameToSeek(ATOMIC_VAR_INIT(-1)), mFlags(ATOMIC_VAR_INIT(0))
+		: mDecoder(nullptr), mTimeStamp(0), mTotalFrames(0), mFramesRendered(0), mFrameToSeek(-1), mFlags(0)
 	{}
 
 };
@@ -222,7 +199,7 @@ namespace {
 #pragma mark Creation/Destruction
 
 SFB::Audio::Player::Player()
-	: mFlags(ATOMIC_VAR_INIT(0)), mRingBuffer(new RingBuffer), mQueue(nullptr), mRingBufferCapacity(ATOMIC_VAR_INIT(RING_BUFFER_CAPACITY_FRAMES)), mRingBufferWriteChunkSize(ATOMIC_VAR_INIT(RING_BUFFER_WRITE_CHUNK_SIZE_FRAMES)), mFramesDecoded(ATOMIC_VAR_INIT(0)), mFramesRendered(ATOMIC_VAR_INIT(0)), mDecoderErrorBlock(nullptr), mFormatMismatchBlock(nullptr), mErrorBlock(nullptr), mOutput(new CoreAudioOutput)
+	: mRingBuffer(new RingBuffer), mRingBufferCapacity(RING_BUFFER_CAPACITY_FRAMES), mRingBufferWriteChunkSize(RING_BUFFER_WRITE_CHUNK_SIZE_FRAMES), mFlags(0), mQueue(nullptr), mFramesDecoded(0), mFramesRendered(0), mOutput(new CoreAudioOutput), mDecoderErrorBlock(nullptr), mFormatMismatchBlock(nullptr), mErrorBlock(nullptr)
 {
 	memset(&mDecoderEventBlocks, 0, sizeof(mDecoderEventBlocks));
 	memset(&mRenderEventBlocks, 0, sizeof(mRenderEventBlocks));
@@ -591,6 +568,9 @@ bool SFB::Audio::Player::GetPlaybackPositionAndTime(SInt64& currentFrame, SInt64
 
 bool SFB::Audio::Player::SeekForward(CFTimeInterval secondsToSkip)
 {
+	if(0 > secondsToSkip)
+		return false;
+
 	DecoderStateData *currentDecoderState = GetCurrentDecoderState();
 
 	if(nullptr == currentDecoderState)
@@ -610,6 +590,9 @@ bool SFB::Audio::Player::SeekForward(CFTimeInterval secondsToSkip)
 
 bool SFB::Audio::Player::SeekBackward(CFTimeInterval secondsToSkip)
 {
+	if(0 > secondsToSkip)
+		return false;
+
 	DecoderStateData *currentDecoderState = GetCurrentDecoderState();
 
 	if(nullptr == currentDecoderState)
@@ -628,6 +611,9 @@ bool SFB::Audio::Player::SeekBackward(CFTimeInterval secondsToSkip)
 
 bool SFB::Audio::Player::SeekToTime(CFTimeInterval timeInSeconds)
 {
+	if(0 > timeInSeconds)
+		return false;
+
 	DecoderStateData *currentDecoderState = GetCurrentDecoderState();
 
 	if(nullptr == currentDecoderState)
@@ -641,6 +627,9 @@ bool SFB::Audio::Player::SeekToTime(CFTimeInterval timeInSeconds)
 
 bool SFB::Audio::Player::SeekToPosition(float position)
 {
+	if(0 > position || 1 < position)
+		return false;
+
 	DecoderStateData *currentDecoderState = GetCurrentDecoderState();
 
 	if(nullptr == currentDecoderState)
@@ -870,15 +859,13 @@ void * SFB::Audio::Player::DecoderThreadEntry()
 		// ========================================
 		// Open the decoder if necessary
 		if(decoder && !decoder->IsOpen()) {
-			CFErrorRef error = nullptr;
+			SFB::CFError error;
 			if(!decoder->Open(&error))  {
 				if(mDecoderErrorBlock)
 					mDecoderErrorBlock(*decoder, error);
 
-				if(error) {
+				if(error)
 					LOGGER_ERR("org.sbooth.AudioEngine.Player", "Error opening decoder: " << error);
-					CFRelease(error), error = nullptr;
-				}
 			}
 		}
 
@@ -892,11 +879,11 @@ void * SFB::Audio::Player::DecoderThreadEntry()
 				LOGGER_ERR("org.sbooth.AudioEngine.Player", "Format not supported: " << decoder->GetFormat());
 
 				if(mErrorBlock) {
-					SFB::CFString description = CFCopyLocalizedString(CFSTR("The format of the file “%@” is not supported."), "");
-					SFB::CFString failureReason = CFCopyLocalizedString(CFSTR("Format not supported"), "");
-					SFB::CFString recoverySuggestion = CFCopyLocalizedString(CFSTR("The file's format is not supported by the selected output device."), "");
+					SFB::CFString description(CFCopyLocalizedString(CFSTR("The format of the file “%@” is not supported."), ""));
+					SFB::CFString failureReason(CFCopyLocalizedString(CFSTR("Format not supported"), ""));
+					SFB::CFString recoverySuggestion(CFCopyLocalizedString(CFSTR("The file's format is not supported by the selected output device."), ""));
 
-					SFB::CFError error = CreateErrorForURL(Decoder::ErrorDomain, Decoder::InputOutputError, description, decoder->GetInputSource().GetURL(), failureReason, recoverySuggestion);
+					SFB::CFError error(CreateErrorForURL(Decoder::ErrorDomain, Decoder::InputOutputError, description, decoder->GetInputSource().GetURL(), failureReason, recoverySuggestion));
 
 					mErrorBlock(error);
 				}
@@ -1344,13 +1331,11 @@ void SFB::Audio::Player::StopActiveDecoders()
 bool SFB::Audio::Player::SetupOutputAndRingBufferForDecoder(Decoder& decoder)
 {
 	// Open the decoder if necessary
-	CFErrorRef error = nullptr;
+	SFB::CFError error;
 	if(!decoder.IsOpen() && !decoder.Open(&error)) {
-		if(error) {
+		if(error)
 			LOGGER_ERR("org.sbooth.AudioEngine.Player", "Error opening decoder: " << error);
-			CFRelease(error), error = nullptr;
-		}
-		
+
 		return false;
 	}
 
@@ -1358,11 +1343,11 @@ bool SFB::Audio::Player::SetupOutputAndRingBufferForDecoder(Decoder& decoder)
 		LOGGER_ERR("org.sbooth.AudioEngine.Player", "Format not supported: " << decoder.GetFormat());
 
 		if(mErrorBlock) {
-			SFB::CFString description = CFCopyLocalizedString(CFSTR("The format of the file “%@” is not supported."), "");
-			SFB::CFString failureReason = CFCopyLocalizedString(CFSTR("Format not supported"), "");
-			SFB::CFString recoverySuggestion = CFCopyLocalizedString(CFSTR("The file's format is not supported by the selected output device."), "");
+			SFB::CFString description(CFCopyLocalizedString(CFSTR("The format of the file “%@” is not supported."), ""));
+			SFB::CFString failureReason(CFCopyLocalizedString(CFSTR("Format not supported"), ""));
+			SFB::CFString recoverySuggestion(CFCopyLocalizedString(CFSTR("The file's format is not supported by the selected output device."), ""));
 
-			SFB::CFError formatError = CreateErrorForURL(Decoder::ErrorDomain, Decoder::InputOutputError, description, decoder.GetInputSource().GetURL(), failureReason, recoverySuggestion);
+			SFB::CFError formatError(CreateErrorForURL(Decoder::ErrorDomain, Decoder::InputOutputError, description, decoder.GetInputSource().GetURL(), failureReason, recoverySuggestion));
 
 			mErrorBlock(formatError);
 		}

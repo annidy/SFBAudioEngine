@@ -1,29 +1,6 @@
 /*
- *  Copyright (C) 2011, 2012, 2013, 2014, 2015 Stephen F. Booth <me@sbooth.org>
- *  All Rights Reserved.
- *
- *  Redistribution and use in source and binary forms, with or without
- *  modification, are permitted provided that the following conditions are
- *  met:
- *
- *  1. Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer.
- *
- *  2. Redistributions in binary form must reproduce the above copyright
- *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution.
- *
- *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- *  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- *  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- *  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- *  HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- *  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- *  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- *  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- *  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * Copyright (c) 2011 - 2017 Stephen F. Booth <me@sbooth.org>
+ * See https://github.com/sbooth/SFBAudioEngine/blob/master/LICENSE.txt for license information
  */
 
 #include "MODDecoder.h"
@@ -111,7 +88,7 @@ bool SFB::Audio::MODDecoder::HandlesMIMEType(CFStringRef mimeType)
 {
 	if(nullptr == mimeType)
 		return false;
-	
+
 	if(kCFCompareEqualTo == CFStringCompare(mimeType, CFSTR("audio/it"), kCFCompareCaseInsensitive))
 		return true;
 	else if(kCFCompareEqualTo == CFStringCompare(mimeType, CFSTR("audio/xm"), kCFCompareCaseInsensitive))
@@ -134,7 +111,7 @@ SFB::Audio::Decoder::unique_ptr SFB::Audio::MODDecoder::CreateDecoder(InputSourc
 #pragma mark Creation and Destruction
 
 SFB::Audio::MODDecoder::MODDecoder(InputSource::unique_ptr inputSource)
-	: Decoder(std::move(inputSource)), df(nullptr, nullptr), duh(nullptr, nullptr), dsr(nullptr, nullptr), mCurrentFrame(0), mTotalFrames(0)
+	: Decoder(std::move(inputSource)), df(nullptr, nullptr), duh(nullptr, nullptr), dsr(nullptr, nullptr), mTotalFrames(0), mCurrentFrame(0)
 {}
 
 #pragma mark Functionality
@@ -152,7 +129,7 @@ bool SFB::Audio::MODDecoder::_Open(CFErrorRef *error)
 		return false;
 	}
 
-	SFB::CFString pathExtension = CFURLCopyPathExtension(GetURL());
+	SFB::CFString pathExtension(CFURLCopyPathExtension(GetURL()));
 	if(nullptr == pathExtension)
 		return false;
 
@@ -165,16 +142,16 @@ bool SFB::Audio::MODDecoder::_Open(CFErrorRef *error)
 		duh = unique_DUH_ptr(dumb_read_s3m(df.get()), unload_duh);
 	else if(kCFCompareEqualTo == CFStringCompare(pathExtension, CFSTR("mod"), kCFCompareCaseInsensitive))
 		duh = unique_DUH_ptr(dumb_read_mod(df.get()), unload_duh);
-	
+
 	if(!duh) {
 		if(error) {
-			SFB::CFString description = CFCopyLocalizedString(CFSTR("The file “%@” is not a valid MOD file."), "");
-			SFB::CFString failureReason = CFCopyLocalizedString(CFSTR("Not a MOD file"), "");
-			SFB::CFString recoverySuggestion = CFCopyLocalizedString(CFSTR("The file's extension may not match the file's type."), "");
-			
+			SFB::CFString description(CFCopyLocalizedString(CFSTR("The file “%@” is not a valid MOD file."), ""));
+			SFB::CFString failureReason(CFCopyLocalizedString(CFSTR("Not a MOD file"), ""));
+			SFB::CFString recoverySuggestion(CFCopyLocalizedString(CFSTR("The file's extension may not match the file's type."), ""));
+
 			*error = CreateErrorForURL(Decoder::ErrorDomain, Decoder::InputOutputError, description, mInputSource->GetURL(), failureReason, recoverySuggestion);
 		}
-		
+
 		return false;
 	}
 
@@ -184,36 +161,36 @@ bool SFB::Audio::MODDecoder::_Open(CFErrorRef *error)
 	dsr = unique_DUH_SIGRENDERER_ptr(duh_start_sigrenderer(duh.get(), 0, 2, 0), duh_end_sigrenderer);
 	if(!dsr) {
 		if(error) {
-			SFB::CFString description = CFCopyLocalizedString(CFSTR("The file “%@” is not a valid MOD file."), "");
-			SFB::CFString failureReason = CFCopyLocalizedString(CFSTR("Not a MOD file"), "");
-			SFB::CFString recoverySuggestion = CFCopyLocalizedString(CFSTR("The file's extension may not match the file's type."), "");
-			
+			SFB::CFString description(CFCopyLocalizedString(CFSTR("The file “%@” is not a valid MOD file."), ""));
+			SFB::CFString failureReason(CFCopyLocalizedString(CFSTR("Not a MOD file"), ""));
+			SFB::CFString recoverySuggestion(CFCopyLocalizedString(CFSTR("The file's extension may not match the file's type."), ""));
+
 			*error = CreateErrorForURL(Decoder::ErrorDomain, Decoder::InputOutputError, description, mInputSource->GetURL(), failureReason, recoverySuggestion);
 		}
 
 		return false;
 	}
-	
+
 	// Generate interleaved 2 channel 44.1 16-bit output
 	mFormat.mFormatID			= kAudioFormatLinearPCM;
 	mFormat.mFormatFlags		= kAudioFormatFlagsNativeEndian | kAudioFormatFlagIsSignedInteger | kAudioFormatFlagIsPacked;
-	
+
 	mFormat.mSampleRate			= DUMB_SAMPLE_RATE;
 	mFormat.mChannelsPerFrame	= DUMB_CHANNELS;
 	mFormat.mBitsPerChannel		= DUMB_BIT_DEPTH;
-	
+
 	mFormat.mBytesPerPacket		= (mFormat.mBitsPerChannel / 8) * mFormat.mChannelsPerFrame;
 	mFormat.mFramesPerPacket	= 1;
 	mFormat.mBytesPerFrame		= mFormat.mBytesPerPacket * mFormat.mFramesPerPacket;
-	
+
 	mFormat.mReserved			= 0;
-	
+
 	// Set up the source format
 	mSourceFormat.mFormatID				= 'MOD ';
-	
+
 	mSourceFormat.mSampleRate			= DUMB_SAMPLE_RATE;
 	mSourceFormat.mChannelsPerFrame		= DUMB_CHANNELS;
-	
+
 	// Setup the channel layout
 	mChannelLayout = ChannelLayout::ChannelLayoutWithTag(kAudioChannelLayoutTag_Stereo);
 
@@ -231,11 +208,10 @@ bool SFB::Audio::MODDecoder::_Close(CFErrorRef */*error*/)
 
 SFB::CFString SFB::Audio::MODDecoder::_GetSourceFormatDescription() const
 {
-	return CFStringCreateWithFormat(kCFAllocatorDefault, 
-									nullptr, 
-									CFSTR("MOD, %u channels, %u Hz"), 
-									mSourceFormat.mChannelsPerFrame, 
-									(unsigned int)mSourceFormat.mSampleRate);
+	return CFString(nullptr,
+					CFSTR("MOD, %u channels, %u Hz"),
+					mSourceFormat.mChannelsPerFrame,
+					(unsigned int)mSourceFormat.mSampleRate);
 }
 
 UInt32 SFB::Audio::MODDecoder::_ReadAudio(AudioBufferList *bufferList, UInt32 frameCount)

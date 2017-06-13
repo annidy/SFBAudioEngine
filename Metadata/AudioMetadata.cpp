@@ -1,29 +1,6 @@
 /*
- *  Copyright (C) 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015 Stephen F. Booth <me@sbooth.org>
- *  All Rights Reserved.
- *
- *  Redistribution and use in source and binary forms, with or without
- *  modification, are permitted provided that the following conditions are
- *  met:
- *
- *  1. Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer.
- *
- *  2. Redistributions in binary form must reproduce the above copyright
- *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution.
- *
- *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- *  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- *  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- *  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- *  HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- *  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- *  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- *  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- *  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * Copyright (c) 2006 - 2017 Stephen F. Booth <me@sbooth.org>
+ * See https://github.com/sbooth/SFBAudioEngine/blob/master/LICENSE.txt for license information
  */
 
 #include <CoreFoundation/CoreFoundation.h>
@@ -99,7 +76,7 @@ CFArrayRef SFB::Audio::Metadata::CreateSupportedFileExtensions()
 	CFMutableArrayRef supportedFileExtensions = CFArrayCreateMutable(kCFAllocatorDefault, 0, &kCFTypeArrayCallBacks);
 
 	for(auto subclassInfo : sRegisteredSubclasses) {
-		SFB::CFArray decoderFileExtensions = subclassInfo.mCreateSupportedFileExtensions();
+		SFB::CFArray decoderFileExtensions(subclassInfo.mCreateSupportedFileExtensions());
 		CFArrayAppendArray(supportedFileExtensions, decoderFileExtensions, CFRangeMake(0, CFArrayGetCount(decoderFileExtensions)));
 	}
 
@@ -111,7 +88,7 @@ CFArrayRef SFB::Audio::Metadata::CreateSupportedMIMETypes()
 	CFMutableArrayRef supportedMIMETypes = CFArrayCreateMutable(kCFAllocatorDefault, 0, &kCFTypeArrayCallBacks);
 
 	for(auto subclassInfo : sRegisteredSubclasses) {
-		SFB::CFArray decoderMIMETypes = subclassInfo.mCreateSupportedMIMETypes();
+		SFB::CFArray decoderMIMETypes(subclassInfo.mCreateSupportedMIMETypes());
 		CFArrayAppendArray(supportedMIMETypes, decoderMIMETypes, CFRangeMake(0, CFArrayGetCount(decoderMIMETypes)));
 	}
 
@@ -150,7 +127,7 @@ SFB::Audio::Metadata::unique_ptr SFB::Audio::Metadata::CreateMetadataForURL(CFUR
 		return nullptr;
 
 	// If this is a file URL, use the extension-based resolvers
-	SFB::CFString scheme = CFURLCopyScheme(url);
+	SFB::CFString scheme(CFURLCopyScheme(url));
 
 	// If there is no scheme the URL is invalid
 	if(!scheme) {
@@ -162,13 +139,13 @@ SFB::Audio::Metadata::unique_ptr SFB::Audio::Metadata::CreateMetadataForURL(CFUR
 	if(kCFCompareEqualTo == CFStringCompare(CFSTR("file"), scheme, kCFCompareCaseInsensitive)) {
 		// Verify the file exists
 		SInt32 errorCode = noErr;
-		SFB::CFBoolean fileExists = (CFBooleanRef)CFURLCreatePropertyFromResource(kCFAllocatorDefault, url, kCFURLFileExists, &errorCode);
-		
+		SFB::CFBoolean fileExists((CFBooleanRef)CFURLCreatePropertyFromResource(kCFAllocatorDefault, url, kCFURLFileExists, &errorCode));
+
 		if(fileExists) {
 			if(CFBooleanGetValue(fileExists)) {
-				SFB::CFString pathExtension = CFURLCopyPathExtension(url);
+				SFB::CFString pathExtension(CFURLCopyPathExtension(url));
 				if(pathExtension) {
-					
+
 					// Some extensions (.oga for example) support multiple audio codecs (Vorbis, FLAC, Speex)
 
 					for(auto subclassInfo : sRegisteredSubclasses) {
@@ -182,18 +159,18 @@ SFB::Audio::Metadata::unique_ptr SFB::Audio::Metadata::CreateMetadataForURL(CFUR
 			}
 			else {
 				LOGGER_WARNING("org.sbooth.AudioEngine.Metadata", "The requested URL doesn't exist");
-				
+
 				if(error) {
-					SFB::CFString description = CFCopyLocalizedString(CFSTR("The file “%@” does not exist."), "");
-					SFB::CFString failureReason = CFCopyLocalizedString(CFSTR("File not found"), "");
-					SFB::CFString recoverySuggestion = CFCopyLocalizedString(CFSTR("The file may exist on removable media or may have been deleted."), "");
-					
+					SFB::CFString description(CFCopyLocalizedString(CFSTR("The file “%@” does not exist."), ""));
+					SFB::CFString failureReason(CFCopyLocalizedString(CFSTR("File not found"), ""));
+					SFB::CFString recoverySuggestion(CFCopyLocalizedString(CFSTR("The file may exist on removable media or may have been deleted."), ""));
+
 					*error = CreateErrorForURL(Metadata::ErrorDomain, Metadata::InputOutputError, description, url, failureReason, recoverySuggestion);
 				}
 			}
 		}
 		else
-			LOGGER_WARNING("org.sbooth.AudioEngine.Metadata", "CFURLCreatePropertyFromResource failed: " << errorCode);		
+			LOGGER_WARNING("org.sbooth.AudioEngine.Metadata", "CFURLCreatePropertyFromResource failed: " << errorCode);
 	}
 
 	return nullptr;
@@ -202,11 +179,8 @@ SFB::Audio::Metadata::unique_ptr SFB::Audio::Metadata::CreateMetadataForURL(CFUR
 #pragma mark Creation and Destruction
 
 SFB::Audio::Metadata::Metadata()
-	: mURL(nullptr)
-{	
-	mMetadata			= CFDictionaryCreateMutable(kCFAllocatorDefault, 0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
-	mChangedMetadata	= CFDictionaryCreateMutable(kCFAllocatorDefault,  0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
-}
+	: mURL(nullptr), mMetadata(0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks), mChangedMetadata(0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks)
+{}
 
 SFB::Audio::Metadata::Metadata(CFURLRef url)
 	: Metadata()
@@ -256,10 +230,10 @@ CFDictionaryRef SFB::Audio::Metadata::CreateDictionaryRepresentation() const
 	free(keys), keys = nullptr;
 	free(values), values = nullptr;
 
-	CFMutableArray pictureArray = CFArrayCreateMutable(kCFAllocatorDefault, 0, &kCFTypeArrayCallBacks);
+	CFMutableArray pictureArray(0, &kCFTypeArrayCallBacks);
 
 	for(auto picture : GetAttachedPictures()) {
-		CFDictionary pictureRepresentation = picture->CreateDictionaryRepresentation();
+		CFDictionary pictureRepresentation(picture->CreateDictionaryRepresentation());
 		CFArrayAppendValue(pictureArray, pictureRepresentation);
 	}
 
@@ -579,7 +553,7 @@ void SFB::Audio::Metadata::SetReleaseDate(CFStringRef releaseDate)
 CFBooleanRef SFB::Audio::Metadata::GetCompilation() const
 {
 	CFTypeRef value = GetValue(kCompilationKey);
-	
+
 	if(nullptr == value)
 		return nullptr;
 
@@ -779,7 +753,7 @@ void SFB::Audio::Metadata::SetGrouping(CFStringRef grouping)
 CFDictionaryRef SFB::Audio::Metadata::GetAdditionalMetadata() const
 {
 	CFTypeRef value = GetValue(kAdditionalMetadataKey);
-	
+
 	if(nullptr == value)
 		return nullptr;
 
@@ -931,10 +905,10 @@ void SFB::Audio::Metadata::RemoveAllAttachedPictures()
 CFStringRef SFB::Audio::Metadata::GetStringValue(CFStringRef key) const
 {
 	CFTypeRef value = GetValue(key);
-	
+
 	if(nullptr == value)
 		return nullptr;
-	
+
 	if(CFStringGetTypeID() != CFGetTypeID(value))
 		return nullptr;
 	else
@@ -944,7 +918,7 @@ CFStringRef SFB::Audio::Metadata::GetStringValue(CFStringRef key) const
 CFNumberRef SFB::Audio::Metadata::GetNumberValue(CFStringRef key) const
 {
 	CFTypeRef value = GetValue(key);
-	
+
 	if(nullptr == value)
 		return nullptr;
 
@@ -960,7 +934,7 @@ CFTypeRef SFB::Audio::Metadata::GetValue(CFStringRef key) const
 {
 	if(nullptr == key)
 		return nullptr;
-	
+
 	if(CFDictionaryContainsKey(mChangedMetadata, key)) {
 		CFTypeRef value = CFDictionaryGetValue(mChangedMetadata, key);
 		return (kCFNull == value ? nullptr : value);
@@ -1008,22 +982,22 @@ void SFB::Audio::Metadata::ClearAllMetadata()
 void SFB::Audio::Metadata::MergeChangedMetadataIntoMetadata()
 {
 	CFIndex count = CFDictionaryGetCount(mChangedMetadata);
-	
+
 	CFTypeRef *keys = (CFTypeRef *)malloc(sizeof(CFTypeRef) * (size_t)count);
 	CFTypeRef *values = (CFTypeRef *)malloc(sizeof(CFTypeRef) * (size_t)count);
-	
+
 	CFDictionaryGetKeysAndValues(mChangedMetadata, keys, values);
-	
+
 	for(CFIndex i = 0; i < count; ++i) {
 		if(kCFNull == values[i])
 			CFDictionaryRemoveValue(mMetadata, keys[i]);
 		else
 			CFDictionarySetValue(mMetadata, keys[i], values[i]);
 	}
-	
+
 	free(keys), keys = nullptr;
 	free(values), values = nullptr;
-	
+
 	CFDictionaryRemoveAllValues(mChangedMetadata);
 
 	auto iter = std::begin(mPictures);

@@ -1,29 +1,6 @@
 /*
- *  Copyright (C) 2012, 2013, 2014, 2015 Stephen F. Booth <me@sbooth.org>
- *  All Rights Reserved.
- *
- *  Redistribution and use in source and binary forms, with or without
- *  modification, are permitted provided that the following conditions are
- *  met:
- *
- *  1. Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer.
- *
- *  2. Redistributions in binary form must reproduce the above copyright
- *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution.
- *
- *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- *  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- *  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- *  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- *  HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- *  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- *  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- *  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- *  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * Copyright (c) 2012 - 2017 Stephen F. Booth <me@sbooth.org>
+ * See https://github.com/sbooth/SFBAudioEngine/blob/master/LICENSE.txt for license information
  */
 
 #pragma once
@@ -53,7 +30,7 @@ namespace SFB {
 	class CFWrapper
 	{
 	public:
-		
+
 		// ========================================
 		/*! @name Creation and Destruction */
 		//@{
@@ -66,7 +43,7 @@ namespace SFB {
 		 * @note The \c CFWrapper takes ownership of \c object
 		 * @param object The object to wrap
 		 */
-		inline CFWrapper(T object)				: CFWrapper(object, true)				{}
+		inline explicit CFWrapper(T object)		: CFWrapper(object, true)				{}
 
 		/*!
 		 * @brief Create a new \c CFWrapper
@@ -119,7 +96,7 @@ namespace SFB {
 				mObject = rhs;
 				mRelease = true;
 			}
-			
+
 			return *this;
 		}
 
@@ -136,7 +113,7 @@ namespace SFB {
 				if(mObject && mRelease)
 					CFRetain(mObject);
 			}
-			
+
 			return *this;
 		}
 
@@ -211,9 +188,76 @@ namespace SFB {
 		/*! @brief Get the wrapped object */
 		inline operator T() const								{ return mObject; }
 
-		
+
+		/*! @brief Get a pointer to the wrapped object */
+		inline T * operator&()
+		{
+			return &mObject;
+		}
+
+
 		/*! @brief Get the wrapped object */
 		inline T Object() const									{ return mObject; }
+
+		//@}
+
+
+		// ========================================
+		/*! @name CoreFoundation object creation */
+		//@{
+
+		/*! @brief Create a new wrapped \c CFStringRef using \c CFStringCreateWithCString with the default allocator */
+		template <typename = std::enable_if<std::is_same<T, CFStringRef>::value>>
+		CFWrapper(const char *cStr, CFStringEncoding encoding)
+			: CFWrapper(CFStringCreateWithCString(kCFAllocatorDefault, cStr, encoding))
+		{}
+
+		/*! @brief Create a new wrapped \c CFStringRef using \c CFStringCreateWithFormatAndArguments with the default allocator */
+		template <typename = std::enable_if<std::is_same<T, CFStringRef>::value>>
+		CFWrapper(CFDictionaryRef formatOptions, CFStringRef format, ...) CF_FORMAT_FUNCTION(3,4)
+			: CFWrapper()
+		{
+			va_list ap;
+			va_start(ap, format);
+			*this = CFStringCreateWithFormatAndArguments(kCFAllocatorDefault, formatOptions, format, ap);
+			va_end(ap);
+		}
+
+		/*! @brief Create a new wrapped \c CFNumberRef using \c CFNumberCreate with the default allocator */
+		template <typename = std::enable_if<std::is_same<T, CFNumberRef>::value>>
+		CFWrapper(CFNumberType theType, const void *valuePtr)
+			: CFWrapper(CFNumberCreate(kCFAllocatorDefault, theType, valuePtr))
+		{}
+
+		/*! @brief Create a new wrapped \c CFArrayRef using \c CFArrayCreate with the default allocator */
+		template <typename = std::enable_if<std::is_same<T, CFArrayRef>::value>>
+		CFWrapper(const void **values, CFIndex numValues, const CFArrayCallBacks *callBacks)
+			: CFWrapper(CFArrayCreate(kCFAllocatorDefault, values, numValues, callBacks))
+		{}
+
+		/*! @brief Create a new wrapped \c CFMutableArrayRef using \c CFArrayCreateMutable with the default allocator */
+		template <typename = std::enable_if<std::is_same<T, CFMutableArrayRef>::value>>
+		CFWrapper(CFIndex capacity, const CFArrayCallBacks *callBacks)
+			: CFWrapper(CFArrayCreateMutable(kCFAllocatorDefault, capacity, callBacks))
+		{}
+
+		/*! @brief Create a new wrapped \c CFDictionaryRef using \c CFDictionaryCreate with the default allocator */
+		template <typename = std::enable_if<std::is_same<T, CFDictionaryRef>::value>>
+		CFWrapper(const void **keys, const void **values, CFIndex numValues, const CFDictionaryKeyCallBacks *keyCallBacks, const CFDictionaryValueCallBacks *valueCallBacks)
+			: CFWrapper(CFDictionaryCreate(kCFAllocatorDefault, keys, values, numValues, keyCallBacks, valueCallBacks))
+		{}
+
+		/*! @brief Create a new wrapped \c CFMutableDictionaryRef using \c CFDictionaryCreateMutable with the default allocator */
+		template <typename = std::enable_if<std::is_same<T, CFMutableDictionaryRef>::value>>
+		CFWrapper(CFIndex capacity, const CFDictionaryKeyCallBacks *keyCallBacks, const CFDictionaryValueCallBacks *valueCallBacks)
+			: CFWrapper(CFDictionaryCreateMutable(kCFAllocatorDefault, capacity, keyCallBacks, valueCallBacks))
+		{}
+
+		/*! @brief Create a new wrapped \c CFDataRef using \c CFDataCreate with the default allocator */
+		template <typename = std::enable_if<std::is_same<T, CFDataRef>::value>>
+		CFWrapper(const UInt8 *bytes, CFIndex length)
+			: CFWrapper(CFDataCreate(kCFAllocatorDefault, bytes, length))
+		{}
 
 		//@}
 

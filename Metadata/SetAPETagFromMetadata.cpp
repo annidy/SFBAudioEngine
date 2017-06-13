@@ -1,29 +1,6 @@
 /*
- *  Copyright (C) 2011, 2012, 2013, 2014, 2015 Stephen F. Booth <me@sbooth.org>
- *  All Rights Reserved.
- *
- *  Redistribution and use in source and binary forms, with or without
- *  modification, are permitted provided that the following conditions are
- *  met:
- *
- *  1. Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer.
- *
- *  2. Redistributions in binary form must reproduce the above copyright
- *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution.
- *
- *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- *  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- *  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- *  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- *  HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- *  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- *  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- *  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- *  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * Copyright (c) 2011 - 2017 Stephen F. Booth <me@sbooth.org>
+ * See https://github.com/sbooth/SFBAudioEngine/blob/master/LICENSE.txt for license information
  */
 
 #include <taglib/flacpicture.h>
@@ -64,7 +41,7 @@ namespace {
 
 		SFB::CFString numberString;
 		if(nullptr != value)
-			numberString = CFStringCreateWithFormat(kCFAllocatorDefault, nullptr, CFSTR("%@"), value);
+			numberString = SFB::CFString(nullptr, CFSTR("%@"), value);
 
 		bool result = SetAPETag(tag, key, numberString);
 
@@ -95,11 +72,11 @@ namespace {
 			if(!CFNumberGetValue(value, kCFNumberDoubleType, &f))
 				LOGGER_INFO("org.sbooth.AudioEngine", "CFNumberGetValue returned an approximation");
 
-			numberString = CFStringCreateWithFormat(kCFAllocatorDefault, nullptr, nullptr == format ? CFSTR("%f") : format, f);
+			numberString = SFB::CFString(nullptr, format ?: CFSTR("%f"), f);
 		}
 
 		bool result = SetAPETag(tag, key, numberString);
-		
+
 		return result;
 	}
 
@@ -141,25 +118,25 @@ bool SFB::Audio::SetAPETagFromMetadata(const Metadata& metadata, TagLib::APE::Ta
 	CFDictionaryRef additionalMetadata = metadata.GetAdditionalMetadata();
 	if(nullptr != additionalMetadata) {
 		CFIndex count = CFDictionaryGetCount(additionalMetadata);
-		
+
 		const void * keys [count];
 		const void * values [count];
-		
+
 		CFDictionaryGetKeysAndValues(additionalMetadata, (const void **)keys, (const void **)values);
-		
+
 		for(CFIndex i = 0; i < count; ++i) {
 			CFIndex keySize = CFStringGetMaximumSizeForEncoding(CFStringGetLength((CFStringRef)keys[i]), kCFStringEncodingASCII);
 			char key [keySize + 1];
-			
+
 			if(!CFStringGetCString((CFStringRef)keys[i], key, keySize + 1, kCFStringEncodingASCII)) {
 				LOGGER_ERR("org.sbooth.AudioEngine", "CFStringGetCString failed");
 				continue;
 			}
-			
+
 			SetAPETag(tag, key, (CFStringRef)values[i]);
 		}
 	}
-	
+
 	// ReplayGain info
 	SetAPETagDouble(tag, "REPLAYGAIN_REFERENCE_LOUDNESS", metadata.GetReplayGainReferenceLoudness(), CFSTR("%2.1f dB"));
 	SetAPETagDouble(tag, "REPLAYGAIN_TRACK_GAIN", metadata.GetReplayGainTrackGain(), CFSTR("%+2.2f dB"));
@@ -177,13 +154,13 @@ bool SFB::Audio::SetAPETagFromMetadata(const Metadata& metadata, TagLib::APE::Ta
 
 		for(auto attachedPicture : metadata.GetAttachedPictures()) {
 			// APE can handle front and back covers natively
-			if(AttachedPicture::Type::FrontCover == attachedPicture->GetType() || AttachedPicture::Type::FrontCover == attachedPicture->GetType()) {
+			if(AttachedPicture::Type::FrontCover == attachedPicture->GetType() || AttachedPicture::Type::BackCover == attachedPicture->GetType()) {
 				TagLib::ByteVector data;
-				
+
 				if(attachedPicture->GetDescription())
 					data.append(TagLib::StringFromCFString(attachedPicture->GetDescription()).data(TagLib::String::UTF8));
 				data.append('\0');
-				data.append(TagLib::ByteVector((const char *)CFDataGetBytePtr(attachedPicture->GetData()), (TagLib::uint)CFDataGetLength(attachedPicture->GetData())));
+				data.append(TagLib::ByteVector((const char *)CFDataGetBytePtr(attachedPicture->GetData()), (size_t)CFDataGetLength(attachedPicture->GetData())));
 
 				if(AttachedPicture::Type::FrontCover == attachedPicture->GetType())
 					tag->setData("Cover Art (Front)", data);
@@ -213,14 +190,14 @@ bool SFB::Audio::SetAPETagFromMetadata(const Metadata& metadata, TagLib::APE::Ta
 					CFNumberRef imageWidth = (CFNumberRef)CFDictionaryGetValue(imagePropertiesDictionary, kCGImagePropertyPixelWidth);
 					CFNumberRef imageHeight = (CFNumberRef)CFDictionaryGetValue(imagePropertiesDictionary, kCGImagePropertyPixelHeight);
 					CFNumberRef imageDepth = (CFNumberRef)CFDictionaryGetValue(imagePropertiesDictionary, kCGImagePropertyDepth);
-					
+
 					int height, width, depth;
-					
+
 					// Ignore numeric conversion errors
 					CFNumberGetValue(imageWidth, kCFNumberIntType, &width);
 					CFNumberGetValue(imageHeight, kCFNumberIntType, &height);
 					CFNumberGetValue(imageDepth, kCFNumberIntType, &depth);
-					
+
 					picture.setHeight(height);
 					picture.setWidth(width);
 					picture.setColorDepth(depth);

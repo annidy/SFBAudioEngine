@@ -1,29 +1,6 @@
 /*
- *  Copyright (C) 2014, 2015 Stephen F. Booth <me@sbooth.org>
- *  All Rights Reserved.
- *
- *  Redistribution and use in source and binary forms, with or without
- *  modification, are permitted provided that the following conditions are
- *  met:
- *
- *  1. Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer.
- *
- *  2. Redistributions in binary form must reproduce the above copyright
- *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution.
- *
- *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- *  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- *  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- *  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- *  HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- *  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- *  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- *  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- *  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * Copyright (c) 2014 - 2017 Stephen F. Booth <me@sbooth.org>
+ * See https://github.com/sbooth/SFBAudioEngine/blob/master/LICENSE.txt for license information
  */
 
 #include <algorithm>
@@ -67,6 +44,8 @@ SFB::Audio::Decoder::unique_ptr SFB::Audio::DoPDecoder::CreateForInputSource(Inp
 
 SFB::Audio::Decoder::unique_ptr SFB::Audio::DoPDecoder::CreateForDecoder(unique_ptr decoder, CFErrorRef *error)
 {
+#pragma unused(error)
+
 	if(!decoder)
 		return nullptr;
 
@@ -88,13 +67,13 @@ bool SFB::Audio::DoPDecoder::_Open(CFErrorRef *error)
 
 	if(!decoderFormat.IsDSD()) {
 		if(error) {
-			SFB::CFString description = CFCopyLocalizedString(CFSTR("The file “%@” is not a valid DSD file."), "");
-			SFB::CFString failureReason = CFCopyLocalizedString(CFSTR("Not a DSD file"), "");
-			SFB::CFString recoverySuggestion = CFCopyLocalizedString(CFSTR("The file's extension may not match the file's type."), "");
+			SFB::CFString description(CFCopyLocalizedString(CFSTR("The file “%@” is not a valid DSD file."), ""));
+			SFB::CFString failureReason(CFCopyLocalizedString(CFSTR("Not a DSD file"), ""));
+			SFB::CFString recoverySuggestion(CFCopyLocalizedString(CFSTR("The file's extension may not match the file's type."), ""));
 
 			*error = CreateErrorForURL(Decoder::ErrorDomain, Decoder::InputOutputError, description, GetURL(), failureReason, recoverySuggestion);
 		}
-		
+
 		return false;
 	}
 
@@ -102,9 +81,9 @@ bool SFB::Audio::DoPDecoder::_Open(CFErrorRef *error)
 		LOGGER_ERR("org.sbooth.AudioEngine.Decoder.DOP", "Unsupported sample rate: " << decoderFormat.mSampleRate);
 
 		if(error) {
-			SFB::CFString description = CFCopyLocalizedString(CFSTR("The file “%@” is not supported."), "");
-			SFB::CFString failureReason = CFCopyLocalizedString(CFSTR("Unsupported DSD sample rate"), "");
-			SFB::CFString recoverySuggestion = CFCopyLocalizedString(CFSTR("The file's sample rate is not supported for DSD over PCM."), "");
+			SFB::CFString description(CFCopyLocalizedString(CFSTR("The file “%@” is not supported."), ""));
+			SFB::CFString failureReason(CFCopyLocalizedString(CFSTR("Unsupported DSD sample rate"), ""));
+			SFB::CFString recoverySuggestion(CFCopyLocalizedString(CFSTR("The file's sample rate is not supported for DSD over PCM."), ""));
 
 			*error = CreateErrorForURL(Decoder::ErrorDomain, Decoder::InputOutputError, description, GetURL(), failureReason, recoverySuggestion);
 		}
@@ -145,7 +124,7 @@ bool SFB::Audio::DoPDecoder::_Close(CFErrorRef *error)
 
 SFB::CFString SFB::Audio::DoPDecoder::_GetSourceFormatDescription() const
 {
-	return mDecoder->CreateSourceFormatDescription();
+	return CFString(mDecoder->CreateSourceFormatDescription());
 }
 
 #pragma mark Functionality

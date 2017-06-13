@@ -1,29 +1,6 @@
 /*
- *  Copyright (C) 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015 Stephen F. Booth <me@sbooth.org>
- *  All Rights Reserved.
- *
- *  Redistribution and use in source and binary forms, with or without
- *  modification, are permitted provided that the following conditions are
- *  met:
- *
- *  1. Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer.
- *
- *  2. Redistributions in binary form must reproduce the above copyright
- *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution.
- *
- *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- *  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- *  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- *  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- *  HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- *  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- *  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- *  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- *  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * Copyright (c) 2006 - 2017 Stephen F. Booth <me@sbooth.org>
+ * See https://github.com/sbooth/SFBAudioEngine/blob/master/LICENSE.txt for license information
  */
 
 #include <algorithm>
@@ -141,7 +118,7 @@ bool SFB::Audio::LoopableRegionDecoder::_Close(CFErrorRef *error)
 
 SFB::CFString SFB::Audio::LoopableRegionDecoder::_GetSourceFormatDescription() const
 {
-	return mDecoder->CreateSourceFormatDescription();
+	return CFString(mDecoder->CreateSourceFormatDescription());
 }
 
 #pragma mark Functionality
@@ -161,7 +138,7 @@ UInt32 SFB::Audio::LoopableRegionDecoder::_ReadAudio(AudioBufferList *bufferList
 	if(nullptr == bufferListAlias) {
 		LOGGER_ERR("org.sbooth.AudioEngine.Decoder.LoopableRegion", "Unable to allocate memory");
 		return 0;
-	}	
+	}
 
 	UInt32 initialBufferCapacityBytes = bufferList->mBuffers[0].mDataByteSize;
 	bufferListAlias->mNumberBuffers = bufferList->mNumberBuffers;
@@ -174,20 +151,20 @@ UInt32 SFB::Audio::LoopableRegionDecoder::_ReadAudio(AudioBufferList *bufferList
 
 		bufferList->mBuffers[i].mDataByteSize			= 0;
 	}
-	
+
 	UInt32 framesRemaining = frameCount;
 	UInt32 totalFramesRead = 0;
-	
+
 	while(0 < framesRemaining) {
 		UInt32 framesRemainingInCurrentPass	= (UInt32)(mStartingFrame + mFrameCount - mDecoder->GetCurrentFrame());
 		UInt32 framesToRead					= std::min(framesRemaining, framesRemainingInCurrentPass);
-		
+
 		// Nothing left to read
 		if(0 == framesToRead)
 			break;
 
 		UInt32 framesRead = mDecoder->ReadAudio(bufferListAlias, framesToRead);
-		
+
 		// A read error occurred
 		if(0 == framesRead)
 			break;
@@ -198,14 +175,14 @@ UInt32 SFB::Audio::LoopableRegionDecoder::_ReadAudio(AudioBufferList *bufferList
 			bufferListAlias->mBuffers[i].mData			= (void *)(buf + (framesRead * mFormat.mBytesPerFrame));
 
 			bufferList->mBuffers[i].mDataByteSize		+= bufferListAlias->mBuffers[i].mDataByteSize;
-			
+
 			bufferListAlias->mBuffers[i].mDataByteSize	= initialBufferCapacityBytes - bufferList->mBuffers[i].mDataByteSize;
 		}
-		
+
 		// Housekeeping
 		mFramesReadInCurrentPass	+= framesRead;
 		mTotalFramesRead			+= framesRead;
-		
+
 		totalFramesRead				+= framesRead;
 		framesRemaining				-= framesRead;
 
@@ -213,13 +190,13 @@ UInt32 SFB::Audio::LoopableRegionDecoder::_ReadAudio(AudioBufferList *bufferList
 		if(mFrameCount == mFramesReadInCurrentPass) {
 			++mCompletedPasses;
 			mFramesReadInCurrentPass = 0;
-			
+
 			// Only seek to the beginning of the region if more passes remain
 			if(mRepeatCount >= mCompletedPasses)
 				mDecoder->SeekToFrame(mStartingFrame);
 		}
 	}
-		
+
 	return totalFramesRead;
 }
 
@@ -248,10 +225,10 @@ bool SFB::Audio::LoopableRegionDecoder::SetupDecoder(bool forceReset)
 	mFormat			= mDecoder->GetFormat();
 	mChannelLayout	= mDecoder->GetChannelLayout();
 	mSourceFormat	= mDecoder->GetSourceFormat();
-	
+
 	if(0 == mFrameCount)
 		mFrameCount = (UInt32)(mDecoder->GetTotalFrames() - mStartingFrame);
-	
+
 	if(forceReset || 0 != mStartingFrame)
 		return Reset();
 

@@ -1,29 +1,6 @@
 /*
- *  Copyright (C) 2011, 2012, 2013, 2014, 2015 Stephen F. Booth <me@sbooth.org>
- *  All Rights Reserved.
- *
- *  Redistribution and use in source and binary forms, with or without
- *  modification, are permitted provided that the following conditions are
- *  met:
- *
- *  1. Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer.
- *
- *  2. Redistributions in binary form must reproduce the above copyright
- *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution.
- *
- *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- *  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- *  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- *  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- *  HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- *  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- *  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- *  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- *  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * Copyright (c) 2011 - 2017 Stephen F. Booth <me@sbooth.org>
+ * See https://github.com/sbooth/SFBAudioEngine/blob/master/LICENSE.txt for license information
  */
 
 #include <taglib/flacpicture.h>
@@ -42,8 +19,8 @@ bool SFB::Audio::AddAPETagToDictionary(CFMutableDictionaryRef dictionary, std::v
 	if(tag->isEmpty())
 		return true;
 
-	SFB::CFMutableDictionary additionalMetadata = CFDictionaryCreateMutable(kCFAllocatorDefault, 0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
-	
+	SFB::CFMutableDictionary additionalMetadata(0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
+
 	for(auto iterator : tag->itemListMap()) {
 		auto item = iterator.second;
 
@@ -51,8 +28,8 @@ bool SFB::Audio::AddAPETagToDictionary(CFMutableDictionaryRef dictionary, std::v
 			continue;
 
 		if(TagLib::APE::Item::Text == item.type()) {
-			SFB::CFString key = CFStringCreateWithCString(kCFAllocatorDefault, item.key().toCString(true), kCFStringEncodingUTF8);
-			SFB::CFString value = CFStringCreateWithCString(kCFAllocatorDefault, item.toString().toCString(true), kCFStringEncodingUTF8);
+			SFB::CFString key(item.key().toCString(true), kCFStringEncodingUTF8);
+			SFB::CFString value(item.toString().toCString(true), kCFStringEncodingUTF8);
 
 			if(kCFCompareEqualTo == CFStringCompare(key, CFSTR("ALBUM"), kCFCompareCaseInsensitive))
 				CFDictionarySetValue(dictionary, Metadata::kAlbumTitleKey, value);
@@ -129,11 +106,11 @@ bool SFB::Audio::AddAPETagToDictionary(CFMutableDictionaryRef dictionary, std::v
 					TagLib::FLAC::Picture picture;
 					picture.parse(decodedBlock);
 
-					SFB::CFData data = CFDataCreate(kCFAllocatorDefault, (const UInt8 *)picture.data().data(), picture.data().size());
+					SFB::CFData data((const UInt8 *)picture.data().data(), picture.data().size());
 
 					SFB::CFString description = nullptr;
 					if(!picture.description().isNull())
-						description = CFStringCreateWithCString(kCFAllocatorDefault, picture.description().toCString(true), kCFStringEncodingUTF8);
+						description(picture.description().toCString(true), kCFStringEncodingUTF8);
 
 					attachedPictures.push_back(std::make_shared<AttachedPicture>(data, (AttachedPicture::Type)picture.type(), description));
 				}
@@ -144,7 +121,7 @@ bool SFB::Audio::AddAPETagToDictionary(CFMutableDictionaryRef dictionary, std::v
 				CFDictionarySetValue(additionalMetadata, key, value);
 		}
 		else if(TagLib::APE::Item::Binary == item.type()) {
-			SFB::CFString key = CFStringCreateWithCString(kCFAllocatorDefault, item.key().toCString(true), kCFStringEncodingUTF8);
+			SFB::CFString key(item.key().toCString(true), kCFStringEncodingUTF8);
 
 			// From http://www.hydrogenaudio.org/forums/index.php?showtopic=40603&view=findpost&p=504669
 			/*
@@ -159,9 +136,9 @@ bool SFB::Audio::AddAPETagToDictionary(CFMutableDictionaryRef dictionary, std::v
 			if(kCFCompareEqualTo == CFStringCompare(key, CFSTR("Cover Art (Front)"), kCFCompareCaseInsensitive) || kCFCompareEqualTo == CFStringCompare(key, CFSTR("Cover Art (Back)"), kCFCompareCaseInsensitive)) {
 				auto binaryData = item.binaryData();
 				size_t pos = binaryData.find('\0');
-				if(TagLib::ByteVector::npos != pos && 3 < binaryData.size()) {
-					SFB::CFData data = CFDataCreate(kCFAllocatorDefault, (const UInt8 *)binaryData.mid((TagLib::uint)pos + 1).data(), (CFIndex)(binaryData.size() - pos - 1));
-					SFB::CFString description = CFStringCreateWithCString(kCFAllocatorDefault, TagLib::String(binaryData.mid(0, (TagLib::uint)pos), TagLib::String::UTF8).toCString(true), kCFStringEncodingUTF8);
+				if(TagLib::ByteVector::npos() != pos && 3 < binaryData.size()) {
+					SFB::CFData data((const UInt8 *)binaryData.mid(pos + 1).data(), (CFIndex)(binaryData.size() - pos - 1));
+					SFB::CFString description(TagLib::String(binaryData.mid(0, pos), TagLib::String::UTF8).toCString(true), kCFStringEncodingUTF8);
 
 					attachedPictures.push_back(std::make_shared<AttachedPicture>(data, kCFCompareEqualTo == CFStringCompare(key, CFSTR("Cover Art (Front)"), kCFCompareCaseInsensitive) ? AttachedPicture::Type::FrontCover : AttachedPicture::Type::BackCover, description));
 				}

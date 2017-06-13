@@ -1,29 +1,6 @@
 /*
- *  Copyright (C) 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015 Stephen F. Booth <me@sbooth.org>
- *  All Rights Reserved.
- *
- *  Redistribution and use in source and binary forms, with or without
- *  modification, are permitted provided that the following conditions are
- *  met:
- *
- *  1. Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer.
- *
- *  2. Redistributions in binary form must reproduce the above copyright
- *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution.
- *
- *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- *  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- *  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- *  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- *  HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- *  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- *  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- *  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- *  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * Copyright (c) 2006 - 2017 Stephen F. Booth <me@sbooth.org>
+ * See https://github.com/sbooth/SFBAudioEngine/blob/master/LICENSE.txt for license information
  */
 
 #include "CoreAudioOutput.h"
@@ -52,7 +29,7 @@ namespace {
 }
 
 SFB::Audio::CoreAudioOutput::CoreAudioOutput()
-	: mAUGraph(nullptr), mOutputNode(-1), mMixerNode(-1), mDefaultMaximumFramesPerSlice(0)
+	: mAUGraph(nullptr), mMixerNode(-1), mOutputNode(-1), mDefaultMaximumFramesPerSlice(0)
 {}
 
 SFB::Audio::CoreAudioOutput::~CoreAudioOutput()
@@ -930,7 +907,7 @@ bool SFB::Audio::CoreAudioOutput::SetActiveDataSources(const std::vector<UInt32>
 		LOGGER_WARNING("org.sbooth.AudioEngine.Output.CoreAudio", "AudioObjectSetPropertyData (kAudioDevicePropertyDataSource) failed: " << result);
 		return false;
 	}
-	
+
 	return true;
 }
 
@@ -2039,11 +2016,11 @@ bool SFB::Audio::CoreAudioOutput::SetOutputUnitChannelMap(const ChannelLayout& c
 		return false;
 	}
 
-	if(nullptr == channelLayout)
+	if(!channelLayout)
 		return true;
 
-	// Stereo
-	if(channelLayout == ChannelLayout::Stereo) {
+	// Mono or Stereo
+	if(channelLayout == ChannelLayout::Mono || channelLayout == ChannelLayout::Stereo) {
 		UInt32 preferredChannelsForStereo [2];
 		UInt32 preferredChannelsForStereoSize = sizeof(preferredChannelsForStereo);
 		result = AudioUnitGetProperty(outputUnit, kAudioDevicePropertyPreferredChannelsForStereo, kAudioUnitScope_Output, 0, preferredChannelsForStereo, &preferredChannelsForStereoSize);
@@ -2068,9 +2045,9 @@ bool SFB::Audio::CoreAudioOutput::SetOutputUnitChannelMap(const ChannelLayout& c
 		// TODO: Verify the following statement to be true
 		// preferredChannelsForStereo uses 1-based indices
 		channelMap[preferredChannelsForStereo[0] - 1] = 0;
-		channelMap[preferredChannelsForStereo[1] - 1] = 1;
+		channelMap[preferredChannelsForStereo[1] - 1] = channelLayout == ChannelLayout::Mono ? 0 : 1;
 
-		LOGGER_DEBUG("org.sbooth.AudioEngine.Output.CoreAudio", "Using  stereo channel map: ");
+		LOGGER_DEBUG("org.sbooth.AudioEngine.Output.CoreAudio", "Using stereo channel map: ");
 		for(UInt32 i = 0; i < outputFormat.mChannelsPerFrame; ++i)
 			LOGGER_DEBUG("org.sbooth.AudioEngine.Output.CoreAudio", "  " << i << " -> " << channelMap[i]);
 
@@ -2146,7 +2123,7 @@ bool SFB::Audio::CoreAudioOutput::SetOutputUnitChannelMap(const ChannelLayout& c
 		}
 	}
 #endif
-	
+
 	return true;
 }
 
@@ -2158,6 +2135,10 @@ OSStatus SFB::Audio::CoreAudioOutput::Render(AudioUnitRenderActionFlags		*ioActi
 											 UInt32							inNumberFrames,
 											 AudioBufferList				*ioData)
 {
+#pragma unused(ioActionFlags)
+#pragma unused(inTimeStamp)
+#pragma unused(inBusNumber)
+
 	mPlayer->ProvideAudio(ioData, inNumberFrames);
 	return noErr;
 }

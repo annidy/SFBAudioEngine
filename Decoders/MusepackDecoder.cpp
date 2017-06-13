@@ -1,29 +1,6 @@
 /*
- *  Copyright (C) 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015 Stephen F. Booth <me@sbooth.org>
- *  All Rights Reserved.
- *
- *  Redistribution and use in source and binary forms, with or without
- *  modification, are permitted provided that the following conditions are
- *  met:
- *
- *  1. Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer.
- *
- *  2. Redistributions in binary form must reproduce the above copyright
- *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution.
- *
- *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- *  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- *  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- *  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- *  HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- *  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- *  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- *  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- *  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * Copyright (c) 2006 - 2017 Stephen F. Booth <me@sbooth.org>
+ * See https://github.com/sbooth/SFBAudioEngine/blob/master/LICENSE.txt for license information
  */
 
 #include <AudioToolbox/AudioFormat.h>
@@ -109,7 +86,7 @@ bool SFB::Audio::MusepackDecoder::HandlesFilesWithExtension(CFStringRef extensio
 
 	if(kCFCompareEqualTo == CFStringCompare(extension, CFSTR("mpc"), kCFCompareCaseInsensitive))
 		return true;
-	
+
 	return false;
 }
 
@@ -160,57 +137,57 @@ bool SFB::Audio::MusepackDecoder::_Open(CFErrorRef *error)
 	mReader.get_size = get_size_callback;
 	mReader.canseek = canseek_callback;
 	mReader.data = this;
-	
+
 	mDemux = mpc_demux_init(&mReader);
 	if(nullptr == mDemux) {
 		if(error) {
-			SFB::CFString description = CFCopyLocalizedString(CFSTR("The file “%@” is not a valid Musepack file."), "");
-			SFB::CFString failureReason = CFCopyLocalizedString(CFSTR("Not a Musepack file"), "");
-			SFB::CFString recoverySuggestion = CFCopyLocalizedString(CFSTR("The file's extension may not match the file's type."), "");
-			
+			SFB::CFString description(CFCopyLocalizedString(CFSTR("The file “%@” is not a valid Musepack file."), ""));
+			SFB::CFString failureReason(CFCopyLocalizedString(CFSTR("Not a Musepack file"), ""));
+			SFB::CFString recoverySuggestion(CFCopyLocalizedString(CFSTR("The file's extension may not match the file's type."), ""));
+
 			*error = CreateErrorForURL(Decoder::ErrorDomain, Decoder::InputOutputError, description, mInputSource->GetURL(), failureReason, recoverySuggestion);
 		}
 
 		mpc_reader_exit_stdio(&mReader);
-		
+
 		return false;
 	}
-	
+
 	// Get input file information
 	mpc_streaminfo streaminfo;
 	mpc_demux_get_info(mDemux, &streaminfo);
-	
+
 	mTotalFrames				= mpc_streaminfo_get_length_samples(&streaminfo);
-	
+
 	// Canonical Core Audio format
 	mFormat.mFormatID			= kAudioFormatLinearPCM;
 	mFormat.mFormatFlags		= kAudioFormatFlagsNativeFloatPacked | kAudioFormatFlagIsNonInterleaved;
-	
+
 	mFormat.mSampleRate			= streaminfo.sample_freq;
 	mFormat.mChannelsPerFrame	= streaminfo.channels;
 	mFormat.mBitsPerChannel		= 8 * sizeof(float);
-	
+
 	mFormat.mBytesPerPacket		= (mFormat.mBitsPerChannel / 8);
 	mFormat.mFramesPerPacket	= 1;
 	mFormat.mBytesPerFrame		= mFormat.mBytesPerPacket * mFormat.mFramesPerPacket;
-	
+
 	mFormat.mReserved			= 0;
-	
+
 	// Set up the source format
 	mSourceFormat.mFormatID				= 'MUSE';
-	
+
 	mSourceFormat.mSampleRate			= streaminfo.sample_freq;
 	mSourceFormat.mChannelsPerFrame		= streaminfo.channels;
-	
+
 	mSourceFormat.mFramesPerPacket		= (1 << streaminfo.block_pwr);
-	
+
 	// Setup the channel layout
 	switch(streaminfo.channels) {
 		case 1:		mChannelLayout = ChannelLayout::ChannelLayoutWithTag(kAudioChannelLayoutTag_Mono);			break;
 		case 2:		mChannelLayout = ChannelLayout::ChannelLayoutWithTag(kAudioChannelLayoutTag_Stereo);		break;
 		case 4:		mChannelLayout = ChannelLayout::ChannelLayoutWithTag(kAudioChannelLayoutTag_Quadraphonic);	break;
 	}
-	
+
 	// Allocate the buffer list
 	if(!mBufferList.Allocate(mFormat, MPC_FRAME_LENGTH)) {
 		if(error)
@@ -218,7 +195,7 @@ bool SFB::Audio::MusepackDecoder::_Open(CFErrorRef *error)
 
 		mpc_demux_exit(mDemux), mDemux = nullptr;
 		mpc_reader_exit_stdio(&mReader);
-		
+
 		return false;
 	}
 
@@ -232,7 +209,7 @@ bool SFB::Audio::MusepackDecoder::_Close(CFErrorRef */*error*/)
 {
 	if(mDemux)
 		mpc_demux_exit(mDemux), mDemux = nullptr;
-	
+
     mpc_reader_exit_stdio(&mReader);
 	mBufferList.Deallocate();
 
@@ -241,11 +218,10 @@ bool SFB::Audio::MusepackDecoder::_Close(CFErrorRef */*error*/)
 
 SFB::CFString SFB::Audio::MusepackDecoder::_GetSourceFormatDescription() const
 {
-	return CFStringCreateWithFormat(kCFAllocatorDefault, 
-									nullptr, 
-									CFSTR("Musepack, %u channels, %u Hz"), 
-									mSourceFormat.mChannelsPerFrame, 
-									(unsigned int)mSourceFormat.mSampleRate);
+	return CFString(nullptr,
+					CFSTR("Musepack, %u channels, %u Hz"),
+					mSourceFormat.mChannelsPerFrame,
+					(unsigned int)mSourceFormat.mSampleRate);
 }
 
 UInt32 SFB::Audio::MusepackDecoder::_ReadAudio(AudioBufferList *bufferList, UInt32 frameCount)
@@ -257,38 +233,38 @@ UInt32 SFB::Audio::MusepackDecoder::_ReadAudio(AudioBufferList *bufferList, UInt
 
 	MPC_SAMPLE_FORMAT	buffer			[MPC_DECODER_BUFFER_LENGTH];
 	UInt32				framesRead		= 0;
-	
+
 	// Reset output buffer data size
 	for(UInt32 i = 0; i < bufferList->mNumberBuffers; ++i)
 		bufferList->mBuffers[i].mDataByteSize = 0;
-	
+
 	for(;;) {
 		UInt32	framesRemaining	= frameCount - framesRead;
 		UInt32	framesToSkip	= (UInt32)(bufferList->mBuffers[0].mDataByteSize / sizeof(float));
 		UInt32	framesInBuffer	= (UInt32)(mBufferList->mBuffers[0].mDataByteSize / sizeof(float));
 		UInt32	framesToCopy	= std::min(framesInBuffer, framesRemaining);
-		
+
 		// Copy data from the buffer to output
 		for(UInt32 i = 0; i < mBufferList->mNumberBuffers; ++i) {
 			float *floatBuffer = (float *)bufferList->mBuffers[i].mData;
 			memcpy(floatBuffer + framesToSkip, mBufferList->mBuffers[i].mData, framesToCopy * sizeof(float));
 			bufferList->mBuffers[i].mDataByteSize += framesToCopy * sizeof(float);
-			
+
 			// Move remaining data in buffer to beginning
 			if(framesToCopy != framesInBuffer) {
 				floatBuffer = (float *)mBufferList->mBuffers[i].mData;
 				memmove(floatBuffer, floatBuffer + framesToCopy, (framesInBuffer - framesToCopy) * sizeof(float));
 			}
-			
+
 			mBufferList->mBuffers[i].mDataByteSize -= framesToCopy * sizeof(float);
 		}
-		
+
 		framesRead += framesToCopy;
-		
+
 		// All requested frames were read
 		if(framesRead == frameCount)
 			break;
-		
+
 		// Decode one frame of MPC data
 		mpc_frame_info frame;
 		frame.buffer = buffer;
@@ -302,7 +278,7 @@ UInt32 SFB::Audio::MusepackDecoder::_ReadAudio(AudioBufferList *bufferList, UInt
 		// End of input
 		if(-1 == frame.bits)
 			break;
-		
+
 #ifdef MPC_FIXED_POINT
 #error "Fixed point not yet supported"
 #else
@@ -320,15 +296,15 @@ UInt32 SFB::Audio::MusepackDecoder::_ReadAudio(AudioBufferList *bufferList, UInt
 
 			for(UInt32 sample = channel; sample < frame.samples * mFormat.mChannelsPerFrame; sample += mFormat.mChannelsPerFrame)
 				*floatBuffer++ = inputBuffer[sample];
-			
+
 			mBufferList->mBuffers[channel].mNumberChannels	= 1;
 			mBufferList->mBuffers[channel].mDataByteSize	= frame.samples * sizeof(float);
 		}
-#endif /* MPC_FIXED_POINT */		
+#endif /* MPC_FIXED_POINT */
 	}
-	
+
 	mCurrentFrame += framesRead;
-	
+
 	return framesRead;
 }
 

@@ -1,29 +1,6 @@
 /*
- *  Copyright (C) 2011, 2012, 2013, 2014, 2015 Stephen F. Booth <me@sbooth.org>
- *  All Rights Reserved.
- *
- *  Redistribution and use in source and binary forms, with or without
- *  modification, are permitted provided that the following conditions are
- *  met:
- *
- *  1. Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer.
- *
- *  2. Redistributions in binary form must reproduce the above copyright
- *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution.
- *
- *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- *  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- *  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- *  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- *  HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- *  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- *  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- *  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- *  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * Copyright (c) 2011 - 2017 Stephen F. Booth <me@sbooth.org>
+ * See https://github.com/sbooth/SFBAudioEngine/blob/master/LICENSE.txt for license information
  */
 
 #include "TrueAudioDecoder.h"
@@ -45,7 +22,7 @@ namespace {
 		SFB::Audio::Decoder::RegisterSubclass<SFB::Audio::TrueAudioDecoder>();
 	}
 
-	
+
 #pragma mark Callbacks
 
 	TTAint32 read_callback(struct _tag_TTA_io_callback *io, TTAuint8 *buffer, TTAuint32 size)
@@ -59,7 +36,7 @@ namespace {
 		SFB::Audio::TrueAudioDecoder::TTA_io_callback_wrapper *iocb = (SFB::Audio::TrueAudioDecoder::TTA_io_callback_wrapper *)io;
 		return iocb->decoder->GetInputSource().SeekToOffset(offset);
 	}
-	
+
 }
 
 #pragma mark Static Methods
@@ -94,7 +71,7 @@ bool SFB::Audio::TrueAudioDecoder::HandlesMIMEType(CFStringRef mimeType)
 
 	if(kCFCompareEqualTo == CFStringCompare(mimeType, CFSTR("audio/x-tta"), kCFCompareCaseInsensitive))
 		return true;
-	
+
 	return false;
 }
 
@@ -125,35 +102,35 @@ bool SFB::Audio::TrueAudioDecoder::_Open(CFErrorRef *error)
 		mDecoder = unique_tta_ptr(new tta::tta_decoder((TTA_io_callback *)mCallbacks.get()));
 		mDecoder->init_get_info(&streamInfo, 0);
 	}
-	catch(tta::tta_exception e) {
+	catch(const tta::tta_exception& e) {
 		LOGGER_CRIT("org.sbooth.AudioEngine.Decoder.TrueAudio", "Error creating True Audio decoder: " << e.code());
 	}
 
 	if(!mDecoder) {
 		if(error) {
-			SFB::CFString description = CFCopyLocalizedString(CFSTR("The file “%@” is not a valid True Audio file."), "");
-			SFB::CFString failureReason = CFCopyLocalizedString(CFSTR("Not a True Audio file"), "");
-			SFB::CFString recoverySuggestion = CFCopyLocalizedString(CFSTR("The file's extension may not match the file's type."), "");
-			
+			SFB::CFString description(CFCopyLocalizedString(CFSTR("The file “%@” is not a valid True Audio file."), ""));
+			SFB::CFString failureReason(CFCopyLocalizedString(CFSTR("Not a True Audio file"), ""));
+			SFB::CFString recoverySuggestion(CFCopyLocalizedString(CFSTR("The file's extension may not match the file's type."), ""));
+
 			*error = CreateErrorForURL(Decoder::ErrorDomain, Decoder::InputOutputError, description, mInputSource->GetURL(), failureReason, recoverySuggestion);
 		}
 
 		return false;
 	}
-	
+
 	mFormat.mFormatID			= kAudioFormatLinearPCM;
 	mFormat.mFormatFlags		= kAudioFormatFlagsNativeEndian | kAudioFormatFlagIsSignedInteger;
-	
+
 	mFormat.mSampleRate			= streamInfo.sps;
 	mFormat.mChannelsPerFrame	= streamInfo.nch;
 	mFormat.mBitsPerChannel		= streamInfo.bps;
-	
+
 	mFormat.mBytesPerPacket		= ((streamInfo.bps + 7) / 8) * mFormat.mChannelsPerFrame;
 	mFormat.mFramesPerPacket	= 1;
 	mFormat.mBytesPerFrame		= mFormat.mBytesPerPacket * mFormat.mFramesPerPacket;
-	
+
 	mFormat.mReserved			= 0;
-	
+
 	// Support 4 to 32 bits per sample (True Audio may support more or less, but the documentation didn't say)
 	switch(mFormat.mBitsPerChannel) {
 		case 8:
@@ -176,10 +153,10 @@ bool SFB::Audio::TrueAudioDecoder::_Open(CFErrorRef *error)
 			LOGGER_CRIT("org.sbooth.AudioEngine.Decoder.TrueAudio", "Unsupported bit depth: " << mFormat.mBitsPerChannel)
 
 			if(error) {
-				SFB::CFString description = CFCopyLocalizedString(CFSTR("The file “%@” is not a supported True Audio file."), "");
-				SFB::CFString failureReason = CFCopyLocalizedString(CFSTR("Bit depth not supported"), "");
-				SFB::CFString recoverySuggestion = CFCopyLocalizedString(CFSTR("The file's bit depth is not supported."), "");
-				
+				SFB::CFString description(CFCopyLocalizedString(CFSTR("The file “%@” is not a supported True Audio file."), ""));
+				SFB::CFString failureReason(CFCopyLocalizedString(CFSTR("Bit depth not supported"), ""));
+				SFB::CFString recoverySuggestion(CFCopyLocalizedString(CFSTR("The file's bit depth is not supported."), ""));
+
 				*error = CreateErrorForURL(Decoder::ErrorDomain, Decoder::FileFormatNotSupportedError, description, mInputSource->GetURL(), failureReason, recoverySuggestion);
 			}
 
@@ -218,11 +195,10 @@ bool SFB::Audio::TrueAudioDecoder::_Close(CFErrorRef */*error*/)
 
 SFB::CFString SFB::Audio::TrueAudioDecoder::_GetSourceFormatDescription() const
 {
-	return CFStringCreateWithFormat(kCFAllocatorDefault, 
-									nullptr, 
-									CFSTR("True Audio, %u channels, %u Hz"), 
-									(unsigned int)mSourceFormat.mChannelsPerFrame,
-									(unsigned int)mSourceFormat.mSampleRate);
+	return CFString(nullptr,
+					CFSTR("True Audio, %u channels, %u Hz"),
+					(unsigned int)mSourceFormat.mChannelsPerFrame,
+					(unsigned int)mSourceFormat.mSampleRate);
 }
 
 UInt32 SFB::Audio::TrueAudioDecoder::_ReadAudio(AudioBufferList *bufferList, UInt32 frameCount)
@@ -238,7 +214,7 @@ UInt32 SFB::Audio::TrueAudioDecoder::_ReadAudio(AudioBufferList *bufferList, UIn
 
 	UInt32 framesRead = 0;
 	bool eos = false;
-	
+
 	try {
 		while(mFramesToSkip && !eos) {
 			if(mFramesToSkip >= frameCount) {
@@ -253,14 +229,14 @@ UInt32 SFB::Audio::TrueAudioDecoder::_ReadAudio(AudioBufferList *bufferList, UIn
 			if(0 == framesRead)
 				eos = true;
 		}
-		
+
 		if(!eos) {
 			framesRead = (UInt32)mDecoder->process_stream((TTAuint8 *)bufferList->mBuffers[0].mData, frameCount);
 			if(0 == framesRead)
 				eos = true;
 		}
 	}
-	catch(tta::tta_exception e) {
+	catch(const tta::tta_exception& e) {
 		LOGGER_ERR("org.sbooth.AudioEngine.Decoder.TrueAudio", "True Audio decoding error: " << e.code());
 		return 0;
 	}
@@ -283,7 +259,7 @@ SInt64 SFB::Audio::TrueAudioDecoder::_SeekToFrame(SInt64 frame)
 	try {
 		mDecoder->set_position(seconds, &frame_start);
 	}
-	catch(tta::tta_exception e) {
+	catch(const tta::tta_exception& e) {
 		LOGGER_ERR("org.sbooth.AudioEngine.Decoder.TrueAudio", "True Audio seek error: " << e.code());
 		return -1;
 	}

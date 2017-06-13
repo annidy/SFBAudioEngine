@@ -1,29 +1,6 @@
 /*
- *  Copyright (C) 2011, 2012, 2013, 2014, 2015 Stephen F. Booth <me@sbooth.org>
- *  All Rights Reserved.
- *
- *  Redistribution and use in source and binary forms, with or without
- *  modification, are permitted provided that the following conditions are
- *  met:
- *
- *  1. Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer.
- *
- *  2. Redistributions in binary form must reproduce the above copyright
- *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution.
- *
- *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- *  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- *  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- *  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- *  HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- *  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- *  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- *  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- *  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * Copyright (c) 2011 - 2017 Stephen F. Booth <me@sbooth.org>
+ * See https://github.com/sbooth/SFBAudioEngine/blob/master/LICENSE.txt for license information
  */
 
 #include <CoreFoundation/CoreFoundation.h>
@@ -174,7 +151,7 @@ namespace {
 			case kAudioChannelLabel_Discrete_14:				return "kAudioChannelLabel_Discrete_14";
 			case kAudioChannelLabel_Discrete_15:				return "kAudioChannelLabel_Discrete_15";
 			case kAudioChannelLabel_Discrete_65535:				return "kAudioChannelLabel_Discrete_65535";
-				
+
 			default:											return nullptr;
 		}
 	}
@@ -276,7 +253,7 @@ std::ostream& operator<<(std::ostream& out, CFURLRef u)
 	else
 #endif
 		out << s;
-	
+
 	return out;
 }
 
@@ -287,7 +264,7 @@ std::ostream& operator<<(std::ostream& out, CFErrorRef e)
 		return out;
 	}
 
-	SFB::CFString r = CFErrorCopyDescription(e);
+	SFB::CFString r(CFErrorCopyDescription(e));
 	if(r)
 		out << r;
 
@@ -301,7 +278,7 @@ std::ostream& operator<<(std::ostream& out, CFUUIDRef u)
 		return out;
 	}
 
-	SFB::CFString r = CFUUIDCreateString(kCFAllocatorDefault, u);
+	SFB::CFString r(CFUUIDCreateString(kCFAllocatorDefault, u));
 	if(r)
 		out << r;
 
@@ -310,7 +287,7 @@ std::ostream& operator<<(std::ostream& out, CFUUIDRef u)
 
 std::ostream& operator<<(std::ostream& out, CFUUIDBytes b)
 {
-	SFB::CFUUID u = CFUUIDCreateFromUUIDBytes(kCFAllocatorDefault, b);
+	SFB::CFUUID u(CFUUIDCreateFromUUIDBytes(kCFAllocatorDefault, b));
 	if(u)
 		out << u;
 
@@ -323,10 +300,10 @@ std::ostream& operator<<(std::ostream& out, const AudioStreamBasicDescription& f
 	unsigned char formatID [5];
 	*(UInt32 *)formatID = OSSwapHostToBigInt32(format.mFormatID);
 	formatID[4] = '\0';
-	
+
 	// General description
 	out << format.mChannelsPerFrame << " ch, " << format.mSampleRate << " Hz, '" << formatID << "' (0x" << std::hex << std::setw(8) << std::setfill('0') << format.mFormatFlags << std::dec << ") ";
-	
+
 	if(kAudioFormatLinearPCM == format.mFormatID) {
 		// Bit depth
 		UInt32 fractionalBits = ((0x3f << 7)/*kLinearPCMFormatFlagsSampleFractionMask*/ & format.mFormatFlags) >> 7/*kLinearPCMFormatFlagsSampleFractionShift*/;
@@ -334,32 +311,32 @@ std::ostream& operator<<(std::ostream& out, const AudioStreamBasicDescription& f
 			out << (format.mBitsPerChannel - fractionalBits) << "." << fractionalBits;
 		else
 			out << format.mBitsPerChannel;
-		
+
 		out << "-bit";
-		
+
 		// Endianness
 		bool isInterleaved = !(kAudioFormatFlagIsNonInterleaved & format.mFormatFlags);
 		UInt32 interleavedChannelCount = (isInterleaved ? format.mChannelsPerFrame : 1);
 		UInt32 sampleSize = (0 < format.mBytesPerFrame && 0 < interleavedChannelCount ? format.mBytesPerFrame / interleavedChannelCount : 0);
 		if(1 < sampleSize)
 			out << ((kLinearPCMFormatFlagIsBigEndian & format.mFormatFlags) ? " big-endian" : " little-endian");
-		
+
 		// Sign
 		bool isInteger = !(kLinearPCMFormatFlagIsFloat & format.mFormatFlags);
 		if(isInteger)
 			out << ((kLinearPCMFormatFlagIsSignedInteger & format.mFormatFlags) ? " signed" : " unsigned");
-		
+
 		// Integer or floating
 		out << (isInteger ? " integer" : " float");
-		
+
 		// Packedness
 		if(0 < sampleSize && ((sampleSize << 3) != format.mBitsPerChannel))
 			out << ((kLinearPCMFormatFlagIsPacked & format.mFormatFlags) ? ", packed in " : ", unpacked in ") << sampleSize << " bytes";
-		
+
 		// Alignment
 		if((0 < sampleSize && ((sampleSize << 3) != format.mBitsPerChannel)) || (0 != (format.mBitsPerChannel & 7)))
 			out << ((kLinearPCMFormatFlagIsAlignedHigh & format.mFormatFlags) ? " high-aligned" : " low-aligned");
-		
+
 		if(!isInterleaved)
 			out << ", deinterleaved";
 	}
@@ -371,18 +348,18 @@ std::ostream& operator<<(std::ostream& out, const AudioStreamBasicDescription& f
     		case kAppleLosslessFormatFlag_24BitSourceData:		sourceBitDepth = 24;	break;
     		case kAppleLosslessFormatFlag_32BitSourceData:		sourceBitDepth = 32;	break;
 		}
-		
+
 		if(0 != sourceBitDepth)
 			out << "from " << sourceBitDepth << "-bit source, ";
 		else
 			out << "from UNKNOWN source bit depth, ";
-		
+
 		out << format.mFramesPerPacket << " frames/packet";
 	}
 	else
 		out << format.mBitsPerChannel << " bits/channel, " << format.mBytesPerPacket << " bytes/packet, " << format.mFramesPerPacket << " frames/packet, " << format.mBytesPerFrame << " bytes/frame";
-	
-	return out;	
+
+	return out;
 }
 
 std::ostream& operator<<(std::ostream& out, const AudioChannelLayout *layout)
